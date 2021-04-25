@@ -27,7 +27,7 @@ async function deposit(account, deposit){
       Object.assign(account, { history: [deposit]});
     }
     await accountRepository.saveAccount(account);
-    return account;
+    return deposit;
   }
   catch(error){
     console.log('accountService::deposit::error');
