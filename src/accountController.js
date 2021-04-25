@@ -2,8 +2,10 @@ const errorUtil = require('./errorUtil');
 const accountService = require('./accountService')
 const { crc32 } = require('crc');
 const authApi = require('./apis/authApi')
+const depositValidation = require('./validation/depositValidation')
 module.exports = {
-  getAccount: getAccount
+  getAccount: getAccount,
+  deposit: deposit
 };
 
 async function getAccount(req, res){
@@ -12,7 +14,7 @@ async function getAccount(req, res){
     console.log('accountController::getAccount');
 
     if(!await validateUser(req.params.email, req.headers.authorization))
-      throw {name: 'EMAIL_MALFORMED', message: errorUtil.knownErrors.EMAIL_MALFORMED, errors: []}
+      throw {name: 'NOT_AUTHORIZED', message: errorUtil.knownErrors.NOT_AUTHORIZED, errors: []}
 
     const accountCode = generateAccoountCode(req.params.email);
     const response = await accountService.getAccount(accountCode);
@@ -25,6 +27,37 @@ async function getAccount(req, res){
   }
   finally{
     console.timeEnd('getAccount');
+  }
+}
+
+async function deposit(req, res){
+  try{
+    console.time('deposit');
+    console.log('accountController::deposit');
+  
+    const validationResult = depositValidation.validateDeposit(req.body)
+    if(validationResult.errors.length > 0)
+      throw {name: 'DEPOSIT_MALFORMATED', message: errorUtil.knownErrors.DEPOSIT_MALFORMATED, errors: validationResult.errors}
+
+    const account = await accountService.getAccount(req.body.target.account);
+
+    if(!account.Item)
+      throw {name: 'NOT_FOUND', message: errorUtil.knownErrors.ACCOUNT_NOT_FOUND, errors: []}
+
+    console.log(account.Item)
+    if(account.Item.cpf != req.body.origin.cpf)
+      throw {name: 'NOT_AUTHORIZED', message: errorUtil.knownErrors.NOT_AUTHORIZED, errors: [{ message: "CPF de origem diferente do CPF da conta destino."}]}
+
+    const response = await accountService.deposit(account.Item, req.body.amount);
+    res.json(response);
+  }
+  catch(error){
+    console.log('accountController::getAccount::error', error);
+    const errorResponse = errorUtil.errorResponse(error.name, error.message, error.errors);
+    res.status(errorResponse.statusCode).send(errorResponse.body);
+  }
+  finally{
+    console.timeEnd('deposit');
   }
 }
 

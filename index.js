@@ -41,4 +41,8 @@ const routePathGetAccount = '/account/:email';
 console.log('Adding get route...' + routePathGetAccount);
 app.get(routePathGetAccount, accountController.getAccount);
 
+const routePathEvents = '/spb/events';
+console.log('Adding get route...' + routePathEvents);
+app.post(routePathEvents, accountController.deposit);
+
 module.exports.handler = serverless(app);

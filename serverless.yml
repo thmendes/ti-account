@@ -52,6 +52,21 @@ functions:
           path: '/account/{email}'
           cors: true
           private: false
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.params.userPoolArn}
+            scopes:
+              - aws.cognito.signin.user.admin
+      - http:
+          method: POST
+          path: '/spb/events'
+          cors: true
+          private: false
+          authorizer:
+            name: authorizer
+            arn: ${self:custom.params.userPoolArn}
+            scopes:
+              - aws.cognito.signin.user.admin
 package:
   exclude:
     - ./**

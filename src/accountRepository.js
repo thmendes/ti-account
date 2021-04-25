@@ -8,20 +8,35 @@ const DYNAMODB_CLIENT = new AWS.DynamoDB.DocumentClient({
 });
 
 module.exports = {
-  getAccount: getAccount
+  getAccount: getAccount,
+  saveAccount: saveAccount
 };
 
-async function getAccount(account){
+async function getAccount(accountCode){
   try{
-    console.log('accountRepository::getAccount', account);
+    console.log('accountRepository::getAccount', accountCode);
     const params = {
       TableName: accountTable,
-      Key: { id: account }
+      Key: { id: accountCode }
     };
     return await DYNAMODB_CLIENT.get(params).promise()
   }
   catch(error){
     console.log('accountRepository::getAccount::error', error);
     throw { name : "Internal", message : errorUtils.knownErrors.INTERNAL, errors: []};
+  }
+}
+
+async function saveAccount(account){
+  try{
+    console.log('accountRepository::saveAccount', account);
+    const params = {
+      TableName: accountTable,
+      Item: account
+    }
+    return await DYNAMODB_CLIENT.put(params).promise()
+  }
+  catch(error){
+
   }
 }
