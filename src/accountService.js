@@ -15,10 +15,17 @@ async function getAccount(account){
   }
 }
 
-async function deposit(account, amount){
+async function deposit(account, deposit){
   try{
     console.log('accountService::deposit');
-    account.balance += amount;
+    account.balance += deposit.amount;
+    Object.assign(deposit, {date: new Date().toISOString()})
+    if(account.history){
+      account.history.push(deposit);
+    }
+    else{
+      Object.assign(account, { history: [deposit]});
+    }
     await accountRepository.saveAccount(account);
     return account;
   }

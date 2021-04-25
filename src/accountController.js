@@ -48,11 +48,11 @@ async function deposit(req, res){
     if(account.Item.cpf != req.body.origin.cpf)
       throw {name: 'NOT_AUTHORIZED', message: errorUtil.knownErrors.NOT_AUTHORIZED, errors: [{ message: "CPF de origem diferente do CPF da conta destino."}]}
 
-    const response = await accountService.deposit(account.Item, req.body.amount);
+    const response = await accountService.deposit(account.Item, req.body);
     res.json(response);
   }
   catch(error){
-    console.log('accountController::getAccount::error', error);
+    console.log('accountController::deposit::error', error);
     const errorResponse = errorUtil.errorResponse(error.name, error.message, error.errors);
     res.status(errorResponse.statusCode).send(errorResponse.body);
   }

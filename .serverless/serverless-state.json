@@ -201,7 +201,7 @@
                 "S3Bucket": {
                   "Ref": "ServerlessDeploymentBucket"
                 },
-                "S3Key": "serverless/ti-api-account/dev/1619133765395-2021-04-22T23:22:45.395Z/ti-api-account.zip"
+                "S3Key": "serverless/ti-api-account/dev/1619381321084-2021-04-25T20:08:41.084Z/ti-api-account.zip"
               },
               "Handler": "index.handler",
               "Runtime": "nodejs12.x",
@@ -226,14 +226,14 @@
               "AppLogGroup"
             ]
           },
-          "AppLambdaVersionXkoQ6VVzMFyLAzyRsrq9TypPhgoG5rvsb7OVW5u3g": {
+          "AppLambdaVersion97Shi5zpTPfQKlEejSUVBn4Zk3kvj4QkEv813pFJCs": {
             "Type": "AWS::Lambda::Version",
             "DeletionPolicy": "Retain",
             "Properties": {
               "FunctionName": {
                 "Ref": "AppLambdaFunction"
               },
-              "CodeSha256": "xrksJzzDrS0GkjX0FhRHKoG25uauLd/IEqYXXKzcPzE=",
+              "CodeSha256": "8hTZYc2SOPfTDVbBDXo302nPq+3ixye8cU4tU00CdoM=",
               "Description": "API for manage accounts"
             }
           },
@@ -271,6 +271,33 @@
                 "Ref": "ApiGatewayResourceAccount"
               },
               "PathPart": "{email}",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceSpb": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Fn::GetAtt": [
+                  "ApiGatewayRestApi",
+                  "RootResourceId"
+                ]
+              },
+              "PathPart": "spb",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
+          "ApiGatewayResourceSpbEvents": {
+            "Type": "AWS::ApiGateway::Resource",
+            "Properties": {
+              "ParentId": {
+                "Ref": "ApiGatewayResourceSpb"
+              },
+              "PathPart": "events",
               "RestApiId": {
                 "Ref": "ApiGatewayRestApi"
               }
@@ -321,6 +348,51 @@
               }
             }
           },
+          "ApiGatewayMethodSpbEventsOptions": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "AuthorizationType": "NONE",
+              "HttpMethod": "OPTIONS",
+              "MethodResponses": [
+                {
+                  "StatusCode": "200",
+                  "ResponseParameters": {
+                    "method.response.header.Access-Control-Allow-Origin": true,
+                    "method.response.header.Access-Control-Allow-Headers": true,
+                    "method.response.header.Access-Control-Allow-Methods": true
+                  },
+                  "ResponseModels": {}
+                }
+              ],
+              "RequestParameters": {},
+              "Integration": {
+                "Type": "MOCK",
+                "RequestTemplates": {
+                  "application/json": "{statusCode:200}"
+                },
+                "ContentHandling": "CONVERT_TO_TEXT",
+                "IntegrationResponses": [
+                  {
+                    "StatusCode": "200",
+                    "ResponseParameters": {
+                      "method.response.header.Access-Control-Allow-Origin": "'*'",
+                      "method.response.header.Access-Control-Allow-Headers": "'Content-Type,X-Amz-Date,Authorization,X-Api-Key,X-Amz-Security-Token,X-Amz-User-Agent'",
+                      "method.response.header.Access-Control-Allow-Methods": "'OPTIONS,POST'"
+                    },
+                    "ResponseTemplates": {
+                      "application/json": "#set($origin = $input.params(\"Origin\"))\n#if($origin == \"\") #set($origin = $input.params(\"origin\")) #end\n#if($origin.matches(\".+\")) #set($context.responseOverride.header.Access-Control-Allow-Origin = $origin) #end"
+                    }
+                  }
+                ]
+              },
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceSpbEvents"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              }
+            }
+          },
           "ApiGatewayMethodAccountEmailVarGet": {
             "Type": "AWS::ApiGateway::Method",
             "Properties": {
@@ -333,7 +405,13 @@
                 "Ref": "ApiGatewayRestApi"
               },
               "ApiKeyRequired": false,
-              "AuthorizationType": "NONE",
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "AuthorizerApiGatewayAuthorizer"
+              },
+              "AuthorizationScopes": [
+                "aws.cognito.signin.user.admin"
+              ],
               "Integration": {
                 "IntegrationHttpMethod": "POST",
                 "Type": "AWS_PROXY",
@@ -362,9 +440,75 @@
                 }
               },
               "MethodResponses": []
+            },
+            "DependsOn": "AuthorizerApiGatewayAuthorizer"
+          },
+          "ApiGatewayMethodSpbEventsPost": {
+            "Type": "AWS::ApiGateway::Method",
+            "Properties": {
+              "HttpMethod": "POST",
+              "RequestParameters": {},
+              "ResourceId": {
+                "Ref": "ApiGatewayResourceSpbEvents"
+              },
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "ApiKeyRequired": false,
+              "AuthorizationType": "COGNITO_USER_POOLS",
+              "AuthorizerId": {
+                "Ref": "AuthorizerApiGatewayAuthorizer"
+              },
+              "AuthorizationScopes": [
+                "aws.cognito.signin.user.admin"
+              ],
+              "Integration": {
+                "IntegrationHttpMethod": "POST",
+                "Type": "AWS_PROXY",
+                "Uri": {
+                  "Fn::Join": [
+                    "",
+                    [
+                      "arn:",
+                      {
+                        "Ref": "AWS::Partition"
+                      },
+                      ":apigateway:",
+                      {
+                        "Ref": "AWS::Region"
+                      },
+                      ":lambda:path/2015-03-31/functions/",
+                      {
+                        "Fn::GetAtt": [
+                          "AppLambdaFunction",
+                          "Arn"
+                        ]
+                      },
+                      "/invocations"
+                    ]
+                  ]
+                }
+              },
+              "MethodResponses": []
+            },
+            "DependsOn": "AuthorizerApiGatewayAuthorizer"
+          },
+          "AuthorizerApiGatewayAuthorizer": {
+            "Type": "AWS::ApiGateway::Authorizer",
+            "Properties": {
+              "AuthorizerResultTtlInSeconds": 300,
+              "IdentitySource": "method.request.header.Authorization",
+              "Name": "authorizer",
+              "RestApiId": {
+                "Ref": "ApiGatewayRestApi"
+              },
+              "Type": "COGNITO_USER_POOLS",
+              "ProviderARNs": [
+                "arn:aws:cognito-idp:us-east-1:101715662936:userpool/us-east-1_EZpI3o3bz"
+              ]
             }
           },
-          "ApiGatewayDeployment1619133754015": {
+          "ApiGatewayDeployment1619381312957": {
             "Type": "AWS::ApiGateway::Deployment",
             "Properties": {
               "RestApiId": {
@@ -374,7 +518,9 @@
             },
             "DependsOn": [
               "ApiGatewayMethodAccountEmailVarOptions",
-              "ApiGatewayMethodAccountEmailVarGet"
+              "ApiGatewayMethodSpbEventsOptions",
+              "ApiGatewayMethodAccountEmailVarGet",
+              "ApiGatewayMethodSpbEventsPost"
             ]
           },
           "AppLambdaPermissionApiGateway": {
@@ -424,7 +570,7 @@
           "AppLambdaFunctionQualifiedArn": {
             "Description": "Current Lambda function version",
             "Value": {
-              "Ref": "AppLambdaVersionXkoQ6VVzMFyLAzyRsrq9TypPhgoG5rvsb7OVW5u3g"
+              "Ref": "AppLambdaVersion97Shi5zpTPfQKlEejSUVBn4Zk3kvj4QkEv813pFJCs"
             }
           },
           "ServiceEndpoint": {
@@ -587,6 +733,55 @@
                 "allowCredentials": false
               },
               "private": false,
+              "authorizer": {
+                "name": "authorizer",
+                "arn": "arn:aws:cognito-idp:us-east-1:101715662936:userpool/us-east-1_EZpI3o3bz",
+                "managedExternally": false,
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": [],
+                "scopes": [
+                  "aws.cognito.signin.user.admin"
+                ]
+              },
+              "integration": "AWS_PROXY"
+            }
+          },
+          {
+            "http": {
+              "method": "post",
+              "path": "spb/events",
+              "cors": {
+                "origins": [
+                  "*"
+                ],
+                "origin": "*",
+                "methods": [
+                  "OPTIONS",
+                  "POST"
+                ],
+                "headers": [
+                  "Content-Type",
+                  "X-Amz-Date",
+                  "Authorization",
+                  "X-Api-Key",
+                  "X-Amz-Security-Token",
+                  "X-Amz-User-Agent"
+                ],
+                "allowCredentials": false
+              },
+              "private": false,
+              "authorizer": {
+                "name": "authorizer",
+                "arn": "arn:aws:cognito-idp:us-east-1:101715662936:userpool/us-east-1_EZpI3o3bz",
+                "managedExternally": false,
+                "resultTtlInSeconds": 300,
+                "identitySource": "method.request.header.Authorization",
+                "claims": [],
+                "scopes": [
+                  "aws.cognito.signin.user.admin"
+                ]
+              },
               "integration": "AWS_PROXY"
             }
           }
@@ -597,7 +792,7 @@
         "timeout": 6,
         "runtime": "nodejs12.x",
         "vpc": {},
-        "versionLogicalId": "AppLambdaVersionXkoQ6VVzMFyLAzyRsrq9TypPhgoG5rvsb7OVW5u3g"
+        "versionLogicalId": "AppLambdaVersion97Shi5zpTPfQKlEejSUVBn4Zk3kvj4QkEv813pFJCs"
       }
     },
     "configValidationMode": "warn",
@@ -626,7 +821,7 @@
           "./index.js"
         ],
         "artifact": "C:\\Users\\Thiago Mendes\\repositorios\\toro-investimentos\\ti-account\\.serverless\\ti-api-account.zip",
-        "artifactDirectoryName": "serverless/ti-api-account/dev/1619133765395-2021-04-22T23:22:45.395Z"
+        "artifactDirectoryName": "serverless/ti-api-account/dev/1619381321084-2021-04-25T20:08:41.084Z"
       },
       "plugins": {
         "$ref": "$[\"service\"][\"plugins\"]"
@@ -636,7 +831,7 @@
     "artifact": "C:\\Users\\Thiago Mendes\\repositorios\\toro-investimentos\\ti-account\\.serverless\\ti-api-account.zip"
   },
   "package": {
-    "artifactDirectoryName": "serverless/ti-api-account/dev/1619133765395-2021-04-22T23:22:45.395Z",
+    "artifactDirectoryName": "serverless/ti-api-account/dev/1619381321084-2021-04-25T20:08:41.084Z",
     "artifact": "ti-api-account.zip"
   }
 }
